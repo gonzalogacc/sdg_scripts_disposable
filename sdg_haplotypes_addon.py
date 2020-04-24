@@ -1,4 +1,5 @@
-def check_neighbourhood(node,next_node,distance,end_size):
+def check_neighbourhood(node,next_node,distance,end_size, lrr):
+    
     l_min=(distance+end_size-1000) * .9
     l_max=(distance+end_size+1000) * 1.1
 
@@ -41,16 +42,19 @@ def review_thread(t):
         print()
 
 #find "truly connected" node pairs (cleanup read threads to only include large unique nodes, this could use some tapping)
-def get_1to1_connections(NODE_SIZE=500,MAX_KCI=1.5,WIN_PERC=.75,WIN_MIN=10):
-
+def get_1to1_connections(ws, lrr, NODE_SIZE=500,MAX_KCI=1.5,WIN_PERC=.75,WIN_MIN=10):
+    
+    from collections import Counter
 
     hs_nodes=set([nv.node_id() for nv in ws.sdg.get_all_nodeviews() if nv.size()>=NODE_SIZE and nv.kci()<=MAX_KCI])
+    print("Selected %s" %(len(hs_nodes), ))
+
     for rid in range(len(lrr.read_threads)):
         lrr.read_threads[rid]=[x for x in lrr.read_threads[rid] if abs(x.node) in hs_nodes]
     mldg_specific=lrr.dg_from_threads(False)
+    print("Read threads hetero filtering ")
 
     conn_ends=set()
-
     for nvf in mldg_specific.get_all_nodeviews():
         #print(nvf)
         for nv in [nvf, nvf.rc()]:
@@ -58,6 +62,7 @@ def get_1to1_connections(NODE_SIZE=500,MAX_KCI=1.5,WIN_PERC=.75,WIN_MIN=10):
             try:
                 mc=Counter([x.node().node_id() for x in nv.next()]).most_common(1)[0]
             except:
+                #print("En continue")
                 continue
             #print ("\nnode %s\nmc=%s"%(str(nv),mc))
             #print(nv.next())
@@ -65,7 +70,8 @@ def get_1to1_connections(NODE_SIZE=500,MAX_KCI=1.5,WIN_PERC=.75,WIN_MIN=10):
                 n=mc[0]
                 mc2=Counter([x.node().node_id() for x in mldg_specific.get_nodeview(n).prev()]).most_common(1)[0]
                 #print("mc2=%d"%mc2)
-                if mc2[0]==nv.node_id() and mc2[1]>=WIN_MIN and mc2[1]/len(nv.next())>=WIN_PERC:
+                #if mc2[0]==nv.node_id() and mc2[1]>=WIN_MIN and mc2[1]/len(nv.next())>=WIN_PERC:
+                if mc2[0]==nv.node_id() and mc2[1]>=WIN_MIN and mc2[1]/len(mldg_specific.get_nodeview(n).prev())>=WIN_PERC:
                     conn_ends.add((min(-nv.node_id(),n),max(-nv.node_id(),n)))
 
     print(len(conn_ends),"connections detected between",len(hs_nodes),"long unique nodes")
@@ -80,9 +86,13 @@ def get_1to1_connections(NODE_SIZE=500,MAX_KCI=1.5,WIN_PERC=.75,WIN_MIN=10):
 
     return conns,mldg_specific
 
-def solve_with_pf():
+def solve_with_pf(ws, lrr, lords):
+    import sys
+    sys.path.append('/hpc-home/ggarcia/git_sources/bsg/recruiter/SDGpython/')
+
+    import SDGpython as SDG
     ge=SDG.GraphEditor(ws)
-    conn=get_1to1_connections()
+    conn=get_1to1_connections(ws, lrr)
     #for c in conn[0][2:3]:
     for c in conn[0]:
         print("\n\n",c)
