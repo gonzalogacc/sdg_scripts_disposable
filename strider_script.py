@@ -1,4 +1,5 @@
-peds.mapper.path_reads()
+
+
 from collections import Counter
 def strider_walk_out(nid):
     #p holds the immediate previous node to a node in the path
@@ -31,7 +32,9 @@ def strider_walk_out(nid):
         else: break
     return path
 
-if __name__ == "__main__":
+def run_strider(ws, peds):
+
+    peds.mapper.path_reads()
     asize=0
     anchors=set()
     for nv in ws.sdg.get_all_nodeviews():
@@ -78,7 +81,7 @@ if __name__ == "__main__":
                 try:
                     SDG.SequenceDistanceGraphPath(ws.sdg,[nid]+p).sequence()
                     paths+=1
-              except:
+                except:
                     nopaths+=1
                 for r in p[:-1]: used_nodes.append(abs(r))
     print("%d paths and %d nopaths"%(paths,nopaths))
